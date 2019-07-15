@@ -1,0 +1,15 @@
+60133fdb287db5bebb0ff91a38730920 *DESCRIPTION
+53107b2283635b4da1ba44fe177d5608 *LICENSE
+fb9a6794b0876ede13639e4dbe1d6cd8 *NAMESPACE
+208db6cf12609d2733fc7c1f301c183c *R/RcppExports.R
+3cc0b92741e52210418e8f9bc1617281 *R/cautiousLearning.R
+ec2a557bf5c8e246a27409ed072dada8 *R/design.R
+4fa3af0e0ca1243dacccb1d9e686726c *R/init.R
+142da464e8395b2aaa70a7aec1d5cce5 *man/CautiousLearning-package.Rd
+f463ecbb5fe0702e7c8828586cc80492 *man/cautiousLearning.Rd
+4bdced5a871a4524762f7bda2392a9d4 *man/design.Rd
+3e86d7a362f5aa77584f0fd4a283bd2e *man/omp.Rd
+001662b543405ba1e6a08707fb2e6efe *man/simulation.Rd
+e2d347f9ad519d45dd6bcf3703472671 *src/Makevars
+a0d0f59d154da353392242eab26fc538 *src/RcppExports.cpp
+0b8d96dd7bc497603369ea62e3b411e6 *src/cautious.cpp
