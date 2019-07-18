@@ -2,7 +2,7 @@ Package: CautiousLearning
 Type: Package
 Title: Control Charts with Guaranteed In-Control Performance and
         Cautious Parameters Learning
-Version: 1.0
+Version: 1.0.1
 Date: 2019-06-30
 Author: Giovanna Capizzi and Guido Masarotto
 Maintainer: Giovanna Capizzi <giovanna.capizzi@unipd.it>
@@ -14,6 +14,6 @@ License: MIT + file LICENSE
 Imports: Rcpp (>= 1.0.0), spc
 LinkingTo: Rcpp, sitmo, BH
 NeedsCompilation: yes
-Packaged: 2019-07-10 08:54:52 UTC; guido
+Packaged: 2019-07-18 10:39:56 UTC; guido
 Repository: CRAN
-Date/Publication: 2019-07-15 09:50:03 UTC
+Date/Publication: 2019-07-18 13:30:04 UTC

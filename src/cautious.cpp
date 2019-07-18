@@ -17,35 +17,47 @@ using namespace Rcpp;
 // [[Rcpp::depends(BH)]]
 #include <boost/random/normal_distribution.hpp>
 
-#define threadRNG (parallel::rngs[thisThread])
+#define threadRNG (parallel::rngs.r[thisThread])
 namespace parallel {
-
-    uint32_t nthreads = 1, grain = 5, seed = 1;
     
-    std::vector< sitmo::prng_engine * > rngs(1, new sitmo::prng_engine(seed));
+    struct RNGS {
+        uint32_t nthreads, seed;
+        std::vector< sitmo::prng_engine * > r;
+        
+        RNGS() : nthreads(1), seed(1) { 
+            r.push_back(new sitmo::prng_engine(seed));
+        }
+
+        ~RNGS() {
+            for (uint32_t i = 0; i<r.size(); i++) delete r[i];
+        }
 
     
-    void setPThreads(uint32_t nthreads) {
+        void setPThreads(uint32_t nt) {
 #ifdef _OPENMP
-        parallel::nthreads = nthreads;
-        for (uint32_t i=parallel::rngs.size(); i<parallel::nthreads; i++) {
-	    uint32_t thisSeed = (parallel::seed+i) % sitmo::prng_engine::max();
-	    parallel::rngs.push_back(new sitmo::prng_engine(thisSeed));
-        }
+            nthreads = nt;
+            for (uint32_t i=r.size(); i<nthreads; i++) {
+	        uint32_t thisSeed = (seed+i) % sitmo::prng_engine::max();
+	        r.push_back(new sitmo::prng_engine(thisSeed));
+            }
 #else
-        Rcpp::warning("No openmp support");
+            Rcpp::warning("No openmp support");
 #endif
-    }
-
-    void setPSeed(double seed) {
-        if ((seed<=0.0) || (seed>=1.0)) 
-            Rcpp::stop("seed must be between 0 and 1");
-        parallel::seed = seed * sitmo::prng_engine::max();
-        for (uint32_t i=0; i<parallel::nthreads; i++) {
-	    uint32_t thisSeed = (parallel::seed+i) % sitmo::prng_engine::max();
-	    parallel::rngs[i]->seed(thisSeed);
         }
-    }
+
+        void setPSeed(double s) {
+            if ((s<=0.0) || (s>=1.0)) 
+                Rcpp::stop("seed must be between 0 and 1");
+            seed = s * sitmo::prng_engine::max();
+            for (uint32_t i=0; i<r.size(); i++) {
+	        uint32_t thisSeed = (seed+i) % sitmo::prng_engine::max();
+	        r[i]->seed(thisSeed);
+            }
+        }
+
+    };
+
+    RNGS rngs;
 
 }
 
@@ -279,8 +291,8 @@ namespace {
     inline void simrl(Chart &c, xbs &s, double m0, double s20, 
                       int nrl, int *rl, int maxrl) {
 #ifdef _OPENMP
-        size_t nt = std::min(static_cast<uint32_t>(nrl/parallel::grain),
-                             parallel::nthreads);
+        size_t nt = std::min(static_cast<uint32_t>(nrl/5),
+                             parallel::rngs.nthreads);
 #pragma omp parallel for num_threads(nt)
 #endif
 	for (int i=0; i<nrl; i++) {
@@ -308,12 +320,10 @@ namespace {
 	Chart &c;
 	xbs &s;
 
-	sScore(int nrl, int maxrl, Chart &c, xbs &s) :
-	    nrl(nrl), maxrl(maxrl), c(c), s(s) {
-            rl = new int[nrl];
-        }
+	sScore(int nrl, int *rl, int maxrl, Chart &c, xbs &s) :
+	    nrl(nrl), rl(rl), maxrl(maxrl), c(c), s(s) {}
 
-        ~sScore() {delete rl;}
+       ~sScore() {}
 
 	double operator()(double h) {
 	    double m0, s20, carl;
@@ -343,12 +353,12 @@ bool hasOMP() {
 
 // [[Rcpp::export]]
 void setOMPThreads(uint32_t nthreads) {
-    parallel::setPThreads(nthreads);
+    parallel::rngs.setPThreads(nthreads);
 }
 
 // [[Rcpp::export]]
 void setSITMOSeeds(double seed) {
-    parallel::setPSeed(seed);
+    parallel::rngs.setPSeed(seed);
 }
 
 
@@ -366,7 +376,8 @@ List mkChart(List chart, int m, double A, double B, double arl0, double Linf,
     double *limit = c.limit;
     xbs s(m); 
     if (c.sim) {
-	sScore sc(H,100*arl0,c, s);
+        IntegerVector rl(H);
+	sScore sc(H, rl.begin(), 100*arl0, c, s);
 	limit[1] = sa::qsolver(limit[1], sc, (1-alpha)*arl0, beta,
                                Linf/100, Ninit, Nfinal);
     } else {
@@ -374,6 +385,7 @@ List mkChart(List chart, int m, double A, double B, double arl0, double Linf,
 	limit[1] = sa::qsolver(limit[1], sc, (1-alpha)*arl0, beta,
                                Linf/100, Ninit, Nfinal);
     }
+    delete &c;
     return ans;
 }
 
@@ -404,6 +416,7 @@ IntegerVector rcrl(int n, List chart, double u, double v,
     double m0 = u/sqrt(c.limit[4]), s20 = 1.0+v*sqrt(2.0/(c.limit[4]-1));
     xbs s(m, tau, delta, omega);
     simrl(c, s, m0, s20, n, rl.begin(), maxrl);
+    delete &c;
     return rl;
 }
 
@@ -419,8 +432,7 @@ NumericMatrix applyChart(List chart, NumericVector x, double mu0, double s0) {
         sl.update(x[i]);
         for (int j=0; j<l; j++) ans(i,j) = stat[j];
     }
+    delete &c;
     return ans;
 }
-
-
 
